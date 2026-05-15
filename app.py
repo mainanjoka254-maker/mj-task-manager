@@ -3,19 +3,12 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from flask import Flask, jsonify, request
+from flask import Flask, redirect, render_template, request
 
-
+app = Flask(__name__)
 
 DB_PATH = Path(__file__).resolve().parent / "university_projects.db"
-TABLE_NAME = "tasks"
-
-
-PRIORITIES = [
-    "Low",
-    "Medium",
-    "High",
-]
+TABLE_NAME = "tasks"  # tasks(id INTEGER PRIMARY KEY, name TEXT)
 
 
 def get_db_connection() -> sqlite3.Connection:
@@ -25,119 +18,56 @@ def get_db_connection() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    """Create table (and add priority column if older DB exists)."""
     with get_db_connection() as conn:
-        # Create base table
         conn.execute(
             "CREATE TABLE IF NOT EXISTS tasks ("
             "id INTEGER PRIMARY KEY, "
-            "name TEXT, "
-            "priority TEXT NOT NULL DEFAULT 'Low'"
+            "name TEXT"
             ")"
         )
-
-        # If DB was created by the older script (no priority column), add it.
-        # This is safe if the column already exists.
-        cols = {
-            row[1] for row in conn.execute(f"PRAGMA table_info({TABLE_NAME})").fetchall()
-        }
-        if "priority" not in cols:
-            conn.execute(
-                f"ALTER TABLE {TABLE_NAME} ADD COLUMN priority TEXT NOT NULL DEFAULT 'Low'"
-            )
-
         conn.commit()
 
 
-app = Flask(__name__)
-
-
-@app.get("/api/tasks")
-def list_tasks():
-    init_db()
-
-    # Search + filter via query params
-    query = (request.args.get("query") or "").strip()
-    priority_filter = (request.args.get("priority_filter") or "").strip()
-
-    # Normalize filter value
-    if priority_filter not in PRIORITIES:
-        priority_filter = ""
-
-    where_clauses: list[str] = []
-    params: list[object] = []
-
-    if query:
-        where_clauses.append("name LIKE ?")
-        params.append(f"%{query}%")
-
-    if priority_filter:
-        where_clauses.append("priority = ?")
-        params.append(priority_filter)
-
-    where_sql = ""
-    if where_clauses:
-        where_sql = "WHERE " + " AND ".join(where_clauses)
-
+def fetch_projects():
     with get_db_connection() as conn:
-        rows = conn.execute(
-            f"SELECT id, name, priority FROM {TABLE_NAME} {where_sql} ORDER BY id DESC",
-            params,
+        return conn.execute(
+            f"SELECT id, name FROM {TABLE_NAME} ORDER BY id DESC"
         ).fetchall()
 
-    return jsonify(
-        {
-            "items": [dict(r) for r in rows],
-        }
-    )
+
+# 1) Root route returns your home page
+@app.route('/')
+def index():
+    init_db()
+    projects = fetch_projects()
+    return render_template('index.html', projects=projects, message=None)
 
 
-@app.post("/api/tasks")
-def create_task():
+# 2) /tasks allows both GET and POST
+@app.route('/tasks', methods=['GET', 'POST'])
+def tasks():
     init_db()
 
+    if request.method == 'POST':
+        name = (request.form.get('name') or '').strip()
+        if name:
+            name = name[:200]
+            with get_db_connection() as conn:
+                conn.execute(
+                    f"INSERT INTO {TABLE_NAME} (name) VALUES (?)",
+                    (name,),
+                )
+                conn.commit()
+        return redirect('/')
 
-    name = (request.form.get("name") or "").strip()
-    priority = (request.form.get("priority") or "Low").strip()
-
-    if not name:
-        return jsonify({"error": "Project name cannot be empty."}), 400
-
-
-    if priority not in PRIORITIES:
-        priority = "Low"
-
-    name = name[:200]
-
-    with get_db_connection() as conn:
-        cur = conn.execute(
-            f"INSERT INTO {TABLE_NAME} (name, priority) VALUES (?, ?)",
-            (name, priority),
-        )
-        conn.commit()
-        new_id = cur.lastrowid
-
-    return jsonify({"id": new_id, "name": name, "priority": priority}), 201
+    # GET just shows the same home page
+    projects = fetch_projects()
+    return render_template('index.html', projects=projects, message=None)
 
 
-
-@app.delete("/api/tasks/<int:project_id>")
-def delete_task(project_id: int):
-
-    init_db()
-
-    with get_db_connection() as conn:
-        conn.execute(f"DELETE FROM {TABLE_NAME} WHERE id = ?", (project_id,))
-        conn.commit()
-
-    return jsonify({"ok": True, "deleted": project_id}), 200
+if __name__ == '__main__':
+    app.run(debug=True)
 
 
-
-if __name__ == "__main__":
-    import os
-
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
 
 
