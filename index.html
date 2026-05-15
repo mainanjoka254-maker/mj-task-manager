@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Manager</title>
+
+    <!-- Bootstrap 5 -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+
+    <!-- Font Awesome icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      integrity="sha512-AvbjQm2c0G2c7bEw8X7oTnG6m4y9f2f3GQHc2p2aYtPp7b0gYb3t8qfV9uJQqgG2q2uK4c0xG8mQe2m1YbQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <style>
+      :root {
+        --card-border: rgba(255, 255, 255, 0.12);
+        --glass: rgba(255, 255, 255, 0.06);
+        --text-muted: rgba(255, 255, 255, 0.65);
+      }
+
+      body {
+        background:
+          radial-gradient(900px 600px at 10% 0%, rgba(34, 211, 238, 0.18), transparent 55%),
+          radial-gradient(900px 700px at 90% 20%, rgba(124, 58, 237, 0.18), transparent 60%),
+          #0b1220;
+        min-height: 100vh;
+      }
+
+      .glass-card {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 18px;
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.35),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+      }
+
+      .glass-card:hover {
+        transform: translateY(-3px);
+        box-shadow:
+          0 26px 80px rgba(0, 0, 0, 0.45),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.18);
+      }
+
+
+      .task-card {
+        padding: 14px 14px;
+      }
+
+      .task-title {
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+
+      .muted-sub {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      .btn-glass {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        color: rgba(255, 255, 255, 0.92);
+        border-radius: 14px;
+      }
+
+      .btn-glass:hover {
+        background: rgba(255, 255, 255, 0.09);
+        color: rgba(255, 255, 255, 0.98);
+      }
+
+      .btn-primary-soft {
+        background: linear-gradient(90deg, #22d3ee 0%, #7c3aed 55%, #60a5fa 100%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 14px;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+        color: #071019;
+        box-shadow:
+          0 12px 40px rgba(34, 211, 238, 0.18),
+          0 12px 40px rgba(124, 58, 237, 0.16);
+        transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+      }
+
+      .btn-primary-soft:hover {
+        transform: translateY(-1px);
+        box-shadow:
+          0 18px 60px rgba(34, 211, 238, 0.24),
+          0 18px 60px rgba(124, 58, 237, 0.22);
+        filter: saturate(1.1);
+      }
+
+
+      /* Priority border colors */
+      .border-priority-high {
+        border-color: rgba(220, 53, 69, 0.65) !important;
+      }
+      .border-priority-medium {
+        border-color: rgba(255, 193, 7, 0.65) !important;
+      }
+      .border-priority-low {
+        border-color: rgba(13, 110, 253, 0.65) !important;
+      }
+
+      @media (min-width: 576px) {
+        .container-narrow {
+          max-width: 520px;
+        }
+      }
+    </style>
+  </head>
+
+  <body class="text-white">
+    <div class="container px-3 py-4 container-narrow">
+      <header class="mb-3 d-flex align-items-start justify-content-between gap-3">
+        <div>
+          <h1 class="h3 mb-1 fw-bold">Task Manager</h1>
+          <div class="muted-sub">View, add, and delete your projects</div>
+        </div>
+      </header>
+
+      {% if message %}
+        <div class="glass-card p-3 mb-3">
+          <div class="fw-semibold">{{ message }}</div>
+        </div>
+      {% endif %}
+
+      <!-- Search + Filter -->
+      <div class="glass-card p-3 mb-3">
+        <form method="get" action="/" class="d-flex flex-column gap-2">
+          <div class="d-flex gap-2 flex-wrap">
+            <div class="flex-grow-1" style="min-width: 220px">
+              <label class="form-label mb-1 fw-semibold">Search</label>
+              <input
+                type="text"
+                class="form-control bg-transparent text-white border-secondary"
+                name="query"
+                value="{{ query or '' }}"
+                placeholder="Search by project name"
+                maxlength="200"
+              />
+            </div>
+
+            <div style="min-width: 190px">
+              <label class="form-label mb-1 fw-semibold">Priority</label>
+              <select
+                class="form-select bg-transparent text-white border-secondary"
+                name="priority_filter"
+              >
+                <option value="" {% if not priority_filter %}selected{% endif %}>All</option>
+                <option value="High" {% if priority_filter=='High' %}selected{% endif %}>High</option>
+                <option value="Medium" {% if priority_filter=='Medium' %}selected{% endif %}>Medium</option>
+                <option value="Low" {% if priority_filter=='Low' %}selected{% endif %}>Low</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary-soft">
+              <i class="fa-solid fa-magnifying-glass me-2"></i>
+              Filter
+            </button>
+            <a class="btn btn-glass" href="/">Clear</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Add form -->
+      <div class="glass-card p-3 mb-3">
+        <form method="post" action="/add" class="d-flex flex-column gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <span
+              class="input-group-text bg-transparent border-secondary"
+              style="color: rgba(255, 255, 255, 0.85); border: none"
+            >
+              <i class="fa-solid fa-folder-plus"></i>
+            </span>
+            <label class="form-label mb-0 fw-semibold">New task / project</label>
+          </div>
+
+          <input
+            type="text"
+            class="form-control bg-transparent text-white border-secondary"
+            name="name"
+            placeholder="e.g. University Portal"
+            required
+            maxlength="200"
+          />
+
+          <label class="form-label mb-0 mt-1 fw-semibold">Priority</label>
+          <select
+            class="form-select bg-transparent text-white border-secondary"
+            name="priority"
+          >
+            <option value="Low" selected>Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+          </select>
+
+          <button type="submit" class="btn btn-primary-soft mt-1">
+            <i class="fa-solid fa-plus me-2"></i>
+            Add
+          </button>
+
+          <div class="muted-sub mt-1">
+            Stored in <span class="fw-semibold">university_projects.db</span> (table:
+            <span class="fw-semibold">tasks</span>)
+          </div>
+        </form>
+      </div>
+
+      <!-- Tasks list -->
+      <div class="d-flex flex-column gap-2">
+        {% if projects and projects|length > 0 %}
+          {% for p in projects %}
+            {% set pr = p.priority if p.priority else 'Low' %}
+            <div
+              class="glass-card task-card d-flex align-items-start justify-content-between gap-3
+              {% if pr == 'High' %}border-priority-high{% elif pr == 'Medium' %}border-priority-medium{% else %}border-priority-low{% endif %}"
+            >
+              <div>
+                <div class="task-title">{{ p.name }}</div>
+                <div class="muted-sub">
+                  ID: {{ p.id }} • Priority: <span class="fw-semibold">{{ pr }}</span>
+                </div>
+              </div>
+
+              <div class="d-flex align-items-center gap-2">
+                <button
+                  type="button"
+                  class="btn-glass btn p-2"
+                  aria-label="Edit"
+                  onclick="alert('Edit not implemented yet.');"
+                >
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+
+                <form
+                  method="post"
+                  action="/delete/{{ p.id }}"
+                  onsubmit="return confirm('Delete this task/project?');"
+                >
+                  <button type="submit" class="btn-glass btn p-2" aria-label="Delete">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="glass-card p-3">
+            <div class="fw-semibold">No tasks yet.</div>
+            <div class="muted-sub mt-1">Add one using the form above.</div>
+          </div>
+        {% endif %}
+      </div>
+
+      <footer class="mt-3 text-center muted-sub" style="font-size: 0.85rem">
+        Localhost: http://127.0.0.1:5000
+      </footer>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
+
